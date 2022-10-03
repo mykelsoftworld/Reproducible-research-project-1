@@ -1,0 +1,124 @@
+---
+title: "Reproducible research project 1"
+author: "Michael"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## import relevant R library
+the following R library shall be imported for processing and analysis of data and setting working directory
+
+```{r cache=TRUE}
+setwd("./")
+path<-"./"
+if(!require("tidyverse")){
+  install.packages("tidyverse")
+  library(tidyverse)
+}
+if(!require("tidyr")){
+  install.packages("tidyr")
+  library(tidyr)
+}
+
+if(!require("dplyr")){
+  install.packages("dplyr")
+  library(dplyr)
+}
+
+if(!require("ggplot2")){
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+```
+
+## Importing data set
+
+the dataset was downloaded from the url [download dataset][1],and imported using relevant R library
+
+```{r cache = TRUE,results='hide'}
+
+download.file(url = "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+              , destfile = paste(path, "dataFiles.zip", sep = "/"))
+              unzip(zipfile = "dataFiles.zip")
+              
+data<-read.csv("./activity.csv")
+head(data,n=6)
+```
+process dataset to remove NA's
+
+```{r}
+# data$day <- format(as.Date(data$date), "%d")               #stores the day from the date
+data$day_of_week <- format(as.Date(data$date), "%A")       #stores the day of the week from the date
+# str(data)
+data <- data%>%
+  mutate(day_period = case_when(day_of_week %in% c("Monday","Tuesday","Wednesday","Thursday","Friday") ~ "weekday",
+                                TRUE ~ "Weekend"))  # Add a new variable called day_period to identify weekday or                                                         #weekend
+factor_1<-factor(data$date)
+```
+
+create a summary dataset for sum of steps per day
+
+```{r}
+#data<-data%>%na_if("")%>%na.omit()
+table_1<-data  %>%
+  group_by(date) %>%
+  summarise(sum_steps = sum(steps,na.rm = TRUE), Average_steps_per_interval = mean(steps,na.rm = TRUE),.groups = 'drop')
+
+table_3<-data  %>%
+  group_by(date) %>%
+  summarise(median_steps_per_day = median(steps,na.rm = TRUE))
+
+  
+ head(table_1,n=20)
+# data<-data%>%na_if("")%>%na.omit()
+```
+
+
+create a table showing average steps take on weekday and on weekends
+```{r}
+table_2<-data  %>%
+  group_by(day_period) %>%
+  summarise(Mean_day_peroid = mean(steps,na.rm = TRUE), .groups = 'drop')
+table_2
+```
+
+## Including Plots
+
+Histogram of the total number of steps taken each day
+
+```{r pressure, echo=FALSE}
+ggplot(table_1, aes(x = sum_steps)) +
+    geom_histogram(fill = "orange") +
+    labs(title = "Daily Steps", x = "Steps", y = "Frequency")
+```
+
+# Plotting line graph for Time series plot of the average number of steps taken
+
+```{r}
+ggplot(table_1, aes(x = date , y = Average_steps_per_interval,group = 1 )) + geom_point(color="red", size=1) + geom_line(color="blue", size=1,group = 1 ) + labs(title = "Avg. Daily Steps", x = "Interval", y = "Avg. Steps per day")
+
+```
+Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+
+```{r}
+ggplot(table_2,aes(day_period,Mean_day_peroid)) +
+  geom_bar(stat="identity",fill="green") +
+  theme_bw()+
+  labs(x="day period", y="Average steps per interval") + 
+  labs(title="Average steps per interval")
+
+```
+
+The 5-minute interval that, on average, contains the maximum number of steps
+
+```{r}
+data[data$steps == max(data$steps), ]
+
+```
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+[1]:https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip/ "download dataset"
