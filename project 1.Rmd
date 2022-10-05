@@ -189,8 +189,8 @@ ggplot(table_4, aes(x = time , y = Average_steps_per_interval,group = 1 )) + geo
 
 The 5-minute interval that, on average, contains the maximum number of steps
 
-```{r,results='hide'}
-# data[data$steps == max(data$steps), ]
+```{r}
+table_7[table_7$Average_steps_per_interval == max(table_7$Average_steps_per_interval), ]
 
 # #remove missing values from vector
 # x <- x[complete.cases(x)]
