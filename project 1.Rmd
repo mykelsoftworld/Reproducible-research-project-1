@@ -55,24 +55,26 @@ data$day_of_week <- format(as.Date(data$date), "%A")       #stores the day of th
 # str(data)
 data <- data%>%
   mutate(day_period = case_when(day_of_week %in% c("Monday","Tuesday","Wednesday","Thursday","Friday") ~ "weekday",
-                                TRUE ~ "Weekend"))  # Add a new variable called day_period to identify weekday or                                                         #weekend
+                                TRUE ~ "weekend"))  # Add a new variable called day_period to identify weekday or                                                         #weekend
 factor_1<-factor(data$date)
 ```
 
 create a summary dataset for sum of steps per day
 
 ```{r}
-#data<-data%>%na_if("")%>%na.omit()
-table_1<-data  %>%
+#data_no_na<-data%>%na_if("")%>%na.omit()
+data_no_na <-data[complete.cases(data),]
+table_1<-data_no_na  %>%
   group_by(date) %>%
-  summarise(sum_steps = sum(steps,na.rm = TRUE), Average_steps_per_interval = mean(steps,na.rm = TRUE),.groups = 'drop')
+  summarise(sum_steps = sum(steps,na.rm = TRUE), Average_steps_per_interval = mean(steps,na.rm = TRUE), .groups = 'drop')
 
-table_3<-data  %>%
-  group_by(date) %>%
-  summarise(median_steps_per_day = median(steps,na.rm = TRUE))
+table_6 <- table_1
 
-  
- head(table_1,n=20)
+table_6$day_of_week <- format(as.Date(table_1$date), "%A")       #stores the day of the week from the date
+
+table_6 <- table_6%>%
+  mutate(day_period = case_when(day_of_week %in% c("Monday","Tuesday","Wednesday","Thursday","Friday") ~ "weekday",
+                                TRUE ~ "weekend"))
 # data<-data%>%na_if("")%>%na.omit()
 ```
 
@@ -82,8 +84,39 @@ create a table showing average steps take on weekday and on weekends
 table_2<-data  %>%
   group_by(day_period) %>%
   summarise(Mean_day_peroid = mean(steps,na.rm = TRUE), .groups = 'drop')
-table_2
+
+mean_weekday <- table_2[table_2$day_period == "weekday","Mean_day_peroid"][[1]]
+mean_weekend <- table_2[table_2$day_period == "weekend","Mean_day_peroid"][[1]]
 ```
+
+ the strategy used for imputing missing data shall consist of replacing na value with evaluated mean for weekdays and weekend as appropriate
+
+```{r}
+data_na_imputted <- data #create a copy of the dataset
+weekday_na <- is.na(data_na_imputted$steps) & data_na_imputted$day_period == "weekday"
+weekend_na <- is.na(data_na_imputted$steps) & data_na_imputted$day_period == "weekend"
+data_na_imputted[weekday_na,"steps"] <- mean_weekday
+data_na_imputted[weekend_na,"steps"] <- mean_weekend
+
+table_5<-data_na_imputted  %>%
+  group_by(date) %>%
+  summarise(sum_steps = sum(steps,na.rm = TRUE), Average_steps_per_interval = mean(steps,na.rm = TRUE),.groups = 'drop')
+```
+
+sorting different dataset for weekday and weekend
+
+```{r}
+data_weekdays <- data[data$day_period == "weekday",]
+data_weekends <- data[data$day_period == "weekend",]
+table_3<-data_weekdays  %>%
+  group_by(date) %>%
+  summarise(sum_steps = sum(steps,na.rm = TRUE), Average_steps_per_interval = mean(steps,na.rm = TRUE),.groups = 'drop')
+table_4<-data_weekends  %>%
+  group_by(date) %>%
+  summarise(sum_steps = sum(steps,na.rm = TRUE), Average_steps_per_interval = mean(steps,na.rm = TRUE),.groups = 'drop')
+
+```
+
 
 ## Including Plots
 
@@ -91,8 +124,14 @@ Histogram of the total number of steps taken each day
 
 ```{r pressure, echo=FALSE}
 ggplot(table_1, aes(x = sum_steps)) +
-    geom_histogram(fill = "orange") +
+    geom_histogram(fill = "orange",binwidth = 1000) +
     labs(title = "Daily Steps", x = "Steps", y = "Frequency")
+```
+# Histogram with na values imputted
+```{r}
+ggplot(table_5, aes(x = sum_steps)) +
+    geom_histogram(fill = "orange") +
+    labs(title = "Daily Steps NA imputted", x = "Steps", y = "Frequency")
 ```
 
 # Plotting line graph for Time series plot of the average number of steps taken
@@ -111,12 +150,27 @@ ggplot(table_2,aes(day_period,Mean_day_peroid)) +
   labs(title="Average steps per interval")
 
 ```
+#plotting average daily steps on weekday and weekends
+```{r}
+ggplot(table_6, aes(x = date , y = Average_steps_per_interval,group = 1 )) + geom_point(color="red", size=1) + geom_line(color="blue", size=1,group = 1 ) + facet_grid(.~day_period,scales = "free",space="free") + labs(title = "Avg. Daily Steps", x = "Days", y = "Avg. Steps per day weekdays")
+
+# ggplot(table_4, aes(x = date , y = Average_steps_per_interval,group = 1 )) + geom_point(color="red", size=1) + geom_line(color="blue", size=1,group = 1 ) + labs(title = "Avg. Daily Steps weekends", x = "Interval", y = "Avg. Steps per day")
+```
+
 
 The 5-minute interval that, on average, contains the maximum number of steps
 
 ```{r}
 data[data$steps == max(data$steps), ]
 
+# #remove missing values from vector
+# x <- x[complete.cases(x)]
+# 
+# #remove rows with missing values in any column of data frame
+# df <- df[complete.cases(df), ]
+# 
+# #remove rows with NA in specific columns of data frame
+# df <- df[complete.cases(df[ , c('col1', 'col2', ...)]), ] 
 ```
 
 
