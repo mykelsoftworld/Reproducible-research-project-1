@@ -32,6 +32,12 @@ if(!require("ggplot2")){
   install.packages("ggplot2")
   library(ggplot2)
 }
+
+if(!require("chron")){
+  install.packages("chron")
+  library(chron)
+}
+
 ```
 
 ## Importing data set
@@ -40,9 +46,12 @@ the dataset was downloaded from the url [download dataset][1],and imported using
 
 ```{r,results='hide'}
 
-download.file(url = "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
-              , destfile = paste(path, "dataFiles.zip", sep = "/"))
-              unzip(zipfile = "dataFiles.zip")
+url <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+if (!(file.exists("./dataFiles.zip")))
+{ download.file(url = "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+              , destfile = paste(path, "dataFiles.zip", sep = "/"))}
+if (!file.exists("./activity.CSV"))
+{unzip(zipfile  = "dataFiles.zip")}
               
 data<-read.csv("./activity.csv")
 head(data,n=6)
@@ -57,6 +66,13 @@ data <- data%>%
   mutate(day_period = case_when(day_of_week %in% c("Monday","Tuesday","Wednesday","Thursday","Friday") ~ "weekday",
                                 TRUE ~ "weekend"))  # Add a new variable called day_period to identify weekday or                                                         #weekend
 factor_1<-factor(data$date)
+#convert time with chron package
+data$time <- sprintf("%04d", data$interval)
+#data$time
+data$time <- paste0(substr(data$time, 1,2), ":", substr(data$time, 3,4), ":", "00")
+data$time <- chron(times. = data$time, format = "h:m:s")
+Sys.setenv(TZ='GMT')
+factor_2<-factor(data$time)
 ```
 
 create a summary dataset for sum of steps per day
@@ -66,19 +82,32 @@ create a summary dataset for sum of steps per day
 data_no_na <-data[complete.cases(data),]
 table_1<-data_no_na  %>%
   group_by(date) %>%
-  summarise(sum_steps = sum(steps,na.rm = TRUE), Average_steps_per_interval = mean(steps,na.rm = TRUE), .groups = 'drop')
-
-table_6 <- table_1
-
-table_6$day_of_week <- format(as.Date(table_1$date), "%A")       #stores the day of the week from the date
-
-table_6 <- table_6%>%
-  mutate(day_period = case_when(day_of_week %in% c("Monday","Tuesday","Wednesday","Thursday","Friday") ~ "weekday",
-                                TRUE ~ "weekend"))
-# data<-data%>%na_if("")%>%na.omit()
+  summarise(sum_steps = sum(steps,na.rm = TRUE), Average_steps_per_day = mean(steps,na.rm = TRUE),Daily_median = median(steps,na.rm = TRUE), .groups = 'drop')
 ```
 
+sorting time series interval into weekdays or weekend
 
+```{r}
+# table_6 <- table_7
+# 
+# table_6$day_of_week <- format(as.Date(table_1$date), "%A")       #stores the day of the week from the date
+# 
+# table_6 <- table_6%>%
+#   mutate(day_period = case_when(day_of_week %in% c("Monday","Tuesday","Wednesday","Thursday","Friday") ~ "weekday",
+#                                 TRUE ~ "weekend"))
+
+
+# data<-data%>%na_if("")%>%na.omit()
+```
+create a dataset of average by time interval
+```{r}
+
+table_7<-data_no_na  %>%
+  group_by(time) %>%
+  summarise(sum_steps = sum(steps,na.rm = TRUE), Average_steps_per_interval = mean(steps,na.rm = TRUE), .groups = 'drop')
+
+
+```
 create a table showing average steps take on weekday and on weekends
 ```{r}
 table_2<-data  %>%
@@ -109,10 +138,10 @@ sorting different dataset for weekday and weekend
 data_weekdays <- data[data$day_period == "weekday",]
 data_weekends <- data[data$day_period == "weekend",]
 table_3<-data_weekdays  %>%
-  group_by(date) %>%
+  group_by(time) %>%
   summarise(sum_steps = sum(steps,na.rm = TRUE), Average_steps_per_interval = mean(steps,na.rm = TRUE),.groups = 'drop')
 table_4<-data_weekends  %>%
-  group_by(date) %>%
+  group_by(time) %>%
   summarise(sum_steps = sum(steps,na.rm = TRUE), Average_steps_per_interval = mean(steps,na.rm = TRUE),.groups = 'drop')
 
 ```
@@ -137,7 +166,7 @@ ggplot(table_5, aes(x = sum_steps)) +
 # Plotting line graph for Time series plot of the average number of steps taken
 
 ```{r}
-ggplot(table_1, aes(x = date , y = Average_steps_per_interval,group = 1 )) + geom_point(color="red", size=1) + geom_line(color="blue", size=1,group = 1 ) + labs(title = "Avg. Daily Steps", x = "Interval", y = "Avg. Steps per day")
+ggplot(table_7, aes(x = time , y = Average_steps_per_interval,group = 1 )) + geom_point(color="red", size=1) + geom_line(color="blue", size=1,group = 1 ) + labs(title = "Avg. Daily Steps", x = "Interval", y = "Avg. Steps per day")
 
 ```
 Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
@@ -152,16 +181,16 @@ ggplot(table_2,aes(day_period,Mean_day_peroid)) +
 ```
 #plotting average daily steps on weekday and weekends
 ```{r}
-ggplot(table_6, aes(x = date , y = Average_steps_per_interval,group = 1 )) + geom_point(color="red", size=1) + geom_line(color="blue", size=1,group = 1 ) + facet_grid(.~day_period,scales = "free",space="free") + labs(title = "Avg. Daily Steps", x = "Days", y = "Avg. Steps per day weekdays")
+ggplot(table_3, aes(x = time , y = Average_steps_per_interval,group = 1 )) + geom_point(color="red", size=1) + geom_line(color="red", size=1,group = 1 ) + labs(title = "Avg. Daily Steps weekdays", x = "Days", y = "Avg. Steps per day weekdays")
 
-# ggplot(table_4, aes(x = date , y = Average_steps_per_interval,group = 1 )) + geom_point(color="red", size=1) + geom_line(color="blue", size=1,group = 1 ) + labs(title = "Avg. Daily Steps weekends", x = "Interval", y = "Avg. Steps per day")
+ggplot(table_4, aes(x = time , y = Average_steps_per_interval,group = 1 )) + geom_point(color="blue", size=1) + geom_line(color="blue", size=1,group = 1 ) + labs(title = "Avg. Daily Steps weekends", x = "Interval", y = "Avg. Steps per day")
 ```
 
 
 The 5-minute interval that, on average, contains the maximum number of steps
 
 ```{r,results='hide'}
-data[data$steps == max(data$steps), ]
+# data[data$steps == max(data$steps), ]
 
 # #remove missing values from vector
 # x <- x[complete.cases(x)]
