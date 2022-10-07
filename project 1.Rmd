@@ -118,18 +118,18 @@ mean_weekday <- table_2[table_2$day_period == "weekday","Mean_day_peroid"][[1]]
 mean_weekend <- table_2[table_2$day_period == "weekend","Mean_day_peroid"][[1]]
 ```
 
- the strategy used for imputing missing data shall consist of replacing na value with evaluated mean for weekdays and weekend as appropriate
+ the strategy used for imputing missing data shall consist of replacing na value with evaluated mean for the respective mean for time interval
 
 ```{r}
 data_na_imputted <- data #create a copy of the dataset
-weekday_na <- is.na(data_na_imputted$steps) & data_na_imputted$day_period == "weekday"
-weekend_na <- is.na(data_na_imputted$steps) & data_na_imputted$day_period == "weekend"
-data_na_imputted[weekday_na,"steps"] <- mean_weekday
-data_na_imputted[weekend_na,"steps"] <- mean_weekend
+for (i in 1:nrow(data_na_imputted)) {
+    if(is.na(data_na_imputted$steps[i])) {
+        average_step_interval <- table_7[table_7$time == data_na_imputted$time[i],"Average_steps_per_interval"]
+          data_na_imputted$steps[i] <- average_step_interval
+ 
+    }
+}
 
-table_5<-data_na_imputted  %>%
-  group_by(date) %>%
-  summarise(sum_steps = sum(steps,na.rm = TRUE), Average_steps_per_interval = mean(steps,na.rm = TRUE),.groups = 'drop')
 ```
 
 sorting different dataset for weekday and weekend
@@ -158,15 +158,15 @@ ggplot(table_1, aes(x = sum_steps)) +
 ```
 # Histogram with na values imputted
 ```{r}
-ggplot(table_5, aes(x = sum_steps)) +
-    geom_histogram(fill = "orange") +
-    labs(title = "Daily Steps NA imputted", x = "Steps", y = "Frequency")
+# ggplot(table_5, aes(x = sum_steps)) +
+#     geom_histogram(fill = "orange") +
+#     labs(title = "Daily Steps NA imputted", x = "Steps", y = "Frequency")
 ```
 
 # Plotting line graph for Time series plot of the average number of steps taken
 
 ```{r}
-ggplot(table_7, aes(x = time , y = Average_steps_per_interval,group = 1 )) + geom_point(color="red", size=1) + geom_line(color="blue", size=1,group = 1 ) + labs(title = "Avg. Daily Steps", x = "Interval", y = "Avg. Steps per day")
+ggplot(table_7, aes(x = time , y = Average_steps_per_interval,group = 1 )) + geom_point(color="blue", size=1) + geom_line(color="blue", size=1,group = 1 ) + labs(title = "Avg. Daily Steps", x = "Interval", y = "Avg. Steps per day")
 
 ```
 Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
